@@ -6,6 +6,7 @@ import json
 import mmap # Не використовується прямо в цьому варіанті, але може бути корисним для дуже великих файлів
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider, Button
 from scipy.signal import spectrogram
 from tqdm import tqdm # Не використовується прямо, але імпортовано в оригінальному файлі
 
@@ -203,6 +204,90 @@ def plot_waterfall(freqs, times, S_db, fc, out_png=None):
         print(f"✅ PNG збережено → {out_png}")
     plt.show()
 
+def interactive_waterfall(sig, fs, fc, threshold_db=-140.0):
+    """Interactively visualize a segment of the IQ data.
+
+    A slider controls the starting sample and length of the segment used for the
+    spectrogram. A button toggles highlighting of areas above ``threshold_db``
+    with red contours.
+    """
+
+    total_samples = len(sig)
+    if total_samples == 0:
+        print("Сигнал порожній, нічого відображати")
+        return
+
+    # Початкові значення: перша секунда запису або весь файл, якщо він коротший
+    init_len = int(min(fs, total_samples))
+    init_start = 0
+
+    freqs, times, S_db = compute_waterfall(sig[init_start:init_start + init_len], fs)
+    if S_db.size == 0:
+        print("Немає даних для побудови спектрограми")
+        return
+
+    fig, ax = plt.subplots(figsize=(12, 7), dpi=120)
+    plt.subplots_adjust(bottom=0.25)
+
+    x_axis = (freqs + fc) / 1e6
+    extent = [x_axis[0], x_axis[-1], times[-1], times[0]]
+    im = ax.imshow(
+        S_db.T,
+        extent=extent,
+        aspect="auto",
+        cmap="viridis",
+        origin="upper",
+        vmin=np.percentile(S_db, 5),
+        vmax=np.percentile(S_db, 95),
+    )
+    ax.set_xlabel("Частота, МГц")
+    ax.set_ylabel("Час, с")
+    ax.set_title(f"Waterfall SigMF (Fc: {fc/1e6:.3f} МГц)")
+    fig.colorbar(im, ax=ax, label="Потужність, дБ")
+
+    ax_start = plt.axes([0.1, 0.1, 0.8, 0.03])
+    ax_len = plt.axes([0.1, 0.05, 0.8, 0.03])
+    start_slider = Slider(ax_start, "Start", 0, max(0, total_samples - 1), valinit=init_start, valstep=max(1, int(fs * 0.1)))
+    len_slider = Slider(ax_len, "Length", int(fs * 0.1), total_samples, valinit=init_len, valstep=max(1, int(fs * 0.1)))
+
+    ax_button = plt.axes([0.82, 0.91, 0.15, 0.05])
+    highlight_btn = Button(ax_button, "Highlight")
+    highlight = False
+    contour = None
+
+    def update(_):
+        nonlocal contour
+        start = int(start_slider.val)
+        length = int(len_slider.val)
+        length = max(512, min(total_samples - start, length))
+        seg = sig[start:start + length]
+        f, t, s_db = compute_waterfall(seg, fs)
+        if s_db.size == 0:
+            return
+        x = (f + fc) / 1e6
+        ext = [x[0], x[-1], t[-1], t[0]]
+        im.set_data(s_db.T)
+        im.set_extent(ext)
+        im.set_clim(np.percentile(s_db, 5), np.percentile(s_db, 95))
+        if contour:
+            for c in contour.collections:
+                c.remove()
+            contour = None
+        if highlight:
+            contour = ax.contour(x, t, s_db.T, levels=[threshold_db], colors="red", linewidths=0.75)
+        fig.canvas.draw_idle()
+
+    def toggle(_):
+        nonlocal highlight
+        highlight = not highlight
+        update(None)
+
+    start_slider.on_changed(update)
+    len_slider.on_changed(update)
+    highlight_btn.on_clicked(toggle)
+
+    plt.show()
+
 # ────────────────────────────────────────────────────────────── main ────
 def main(meta_path_str):
     meta_path = str(meta_path_str) # Переконуємося, що це рядок для сумісності
@@ -231,21 +316,8 @@ def main(meta_path_str):
 
     print(f"Завантажено {sig.size} IQ семплів.")
 
-    # Параметри для спектрограми - можна винести в аргументи командного рядка
-    nfft_val = 4096
-    overlap_ratio_val = 0.9 # 90% перекриття
-    
-    print(f"Обчислення водоспаду з nfft={nfft_val}, перекриття={overlap_ratio_val*100}%...")
-    freqs, times, S_db = compute_waterfall(sig, fs, nfft=nfft_val, overlap_ratio=overlap_ratio_val)
-    
-    # Визначення імені вихідного файлу
-    base_name = os.path.basename(meta_path)
-    name_without_ext = os.path.splitext(base_name)[0]
-    # Переконаємося, що вихідний файл зберігається в поточній директорії або вказаній
-    output_directory = "." # Поточна директорія
-    png_filename = os.path.join(output_directory, name_without_ext + "_waterfall.png")
-    
-    plot_waterfall(freqs, times, S_db, fc, out_png=png_filename)
+    # Інтерактивне візуалізування
+    interactive_waterfall(sig, fs, fc)
 
 if __name__ == "__main__":
     import argparse
