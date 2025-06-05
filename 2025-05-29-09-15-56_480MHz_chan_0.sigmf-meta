@@ -1,0 +1,67 @@
+{
+  "annotations": [
+    {
+      "core:freq_lower_edge": 470502793,
+      "core:freq_upper_edge": 471452514,
+      "core:label": "Azart",
+      "core:sample_count": 2869,
+      "core:sample_start": 7948159
+    },
+    {
+      "core:freq_lower_edge": 478770950,
+      "core:freq_upper_edge": 480223464,
+      "core:label": "Azart",
+      "core:sample_count": 2717,
+      "core:sample_start": 7946103
+    }
+  ],
+  "captures": [
+    {
+      "capture_details:gain": 0,
+      "core:datetime": "2025-05-29T09:15:56Z",
+      "core:frequency": 480000000,
+      "core:sample_start": 0
+    }
+  ],
+  "global": {
+    "antenna:gain": 0,
+    "antenna:type": "UNK",
+    "core:datatype": "ci16_le",
+    "core:description": "OmniSIG Recording",
+    "core:extensions": [
+      {
+        "name": "antenna",
+        "optional": true,
+        "version": "1.0.0"
+      },
+      {
+        "name": "spatial",
+        "optional": true,
+        "version": "1.0.0"
+      },
+      {
+        "name": "capture_details",
+        "optional": true,
+        "version": "1.0.0"
+      },
+      {
+        "name": "deepsig",
+        "optional": true,
+        "version": "1.0.0"
+      }
+    ],
+    "core:recorder": "OmniSIG Sensor v3.4.2",
+    "core:sample_rate": 40000000,
+    "core:version": "1.1.0",
+    "deepsig:classifier_model": "/home/nvidia/.config/deepsig/.cache/models/shahed_model_Model_Epochs_705.ds",
+    "deepsig:sensor_id": "tegra-ubuntu",
+    "traceability:last_modified": {
+      "author": "test",
+      "datetime": "2025-05-29T12:59:50.434Z"
+    },
+    "traceability:last_reviewed": {
+      "author": "",
+      "datetime": ""
+    }
+  }
+}
